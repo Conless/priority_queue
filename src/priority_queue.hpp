@@ -94,7 +94,6 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
         int dis;
         tnode *lson, *rson;
         tnode(const T &_data, int _dis = 0) : data(_data), dis(_dis), lson(nullptr), rson(nullptr) {}
-        void tnode_merge(tnode *other);
     } * rt;
 
     tnode *tnode_copy(tnode *org) {
