@@ -51,7 +51,13 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
     void push(const T &e) {
         tnode *tmp = new tnode(e);
         siz++;
-        rt = tnode_merge(rt, tmp);
+        try {
+            rt = tnode_merge(rt, tmp);
+        } catch (...) {
+            delete tmp;
+            siz--;
+            throw;
+        }
     }
     /**
      * TODO
@@ -61,10 +67,14 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
     void pop() {
         if (siz == 0)
             throw container_is_empty();
-        tnode *tmp = rt;
-        rt = tnode_merge(rt->lson, rt->rson);
-        delete tmp;
-        siz--;
+        try {
+            tnode *tmp = rt;
+            rt = tnode_merge(rt->lson, rt->rson);
+            delete tmp;
+            siz--;
+        } catch (...) {
+            throw;
+        }
     }
     /**
      * return the number of the elements.
@@ -80,10 +90,14 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
      * clear the other priority_queue.
      */
     void merge(priority_queue &other) {
-        rt = tnode_merge(rt, other.rt);
-        siz += other.siz;
-        other.rt = nullptr;
-        other.siz = 0;
+        try {
+            rt = tnode_merge(rt, other.rt);
+            siz += other.siz;
+            other.rt = nullptr;
+            other.siz = 0;
+        } catch (...) {
+            throw;
+        }
     }
 
   private:
@@ -116,6 +130,7 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
             org->rson = nullptr;
         }
         delete org;
+        org = nullptr;
     }
     tnode *tnode_merge(tnode *nd1, tnode *nd2) {
         if (nd1 == nullptr)
@@ -123,12 +138,19 @@ template <typename T, class Compare = std::less<T>> class priority_queue {
         if (nd2 == nullptr)
             nd2 = nd1;
         if (nd1 != nd2) {
-            if (Compare()(nd1->data, nd2->data))
-                std::swap(nd1, nd2);
-            nd1->rson = tnode_merge(nd1->rson, nd2);
-            if (nd1->lson == nullptr || nd1->lson->dis < nd1->rson->dis)
-                std::swap(nd1->lson, nd1->rson);
-            nd1->dis = nd1->rson ? (nd1->rson->dis + 1) : 1;
+            bool comp;
+            try {
+                if (Compare()(nd1->data, nd2->data))
+                    std::swap(nd1, nd2);
+                tnode *tmp = tnode_merge(nd1->rson, nd2);
+                if (tmp != nullptr)
+                    nd1->rson = tmp;
+                if (nd1->lson == nullptr || nd1->lson->dis < nd1->rson->dis)
+                    std::swap(nd1->lson, nd1->rson);
+                nd1->dis = nd1->rson ? (nd1->rson->dis + 1) : 1;
+            } catch (...) {
+                throw;
+            }
         }
         return nd1;
     }
