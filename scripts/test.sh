@@ -1,6 +1,6 @@
 #!/bin/bash
 prefix="./data/"
-name=("one.memcheck" "two" "three" "four" "five")
+name=("one" "two" "three" "four" "five")
 
 test() {
     cppfile=$prefix${name[$1-1]}"/code.cpp"
