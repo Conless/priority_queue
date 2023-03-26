@@ -1,0 +1,111 @@
+\documentclass[a4paper]{ctexart}
+
+\input{setup}
+
+\title{斜堆复杂度分析报告}
+\author{潘屹 \\ {\small 上海交通大学 ACM 班 (电院 2231), 522031910741}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+    本文对斜堆的时间复杂度进行了分析，参考 D.D. Sleator 与 R.E. Tarjan 的势能分析法\cite{sleator1986self}，证明其归并操作的均摊时间复杂度为 \begin{align*}
+        T(n) = O(\log n).
+    \end{align*}
+    进一步地，参考 B. Schoenmakers 的方式\cite{kaldewaij1991derivation}\cite{schoenmakers1997tight}，能得到该操作在最坏情况下的均摊时间 \begin{align*}
+        T(n) \le \log_\varPhi n,\quad\varPhi=\frac{1+\sqrt{5}}{2}.
+    \end{align*}
+\end{abstract}
+
+\section{原理简析}
+
+斜堆是左偏树的一个变种，由 D.D. Sleator 与 R.E. Tarjan 在 1986 年提出。其与左偏树的主要区别在于不保证左儿子高度大于等于右儿子，即在 merge 操作中，不进行左右儿子高度的判断；而是每一次将右儿子与新堆归并后，都进行左右儿子的交换操作。归并操作的 C++ 实现代码如下：
+
+\begin{lstlisting}[language=C++]
+tnode* merge(tnode *x, tnode *y) {
+    if (x == nullptr)
+        return y;
+    if (y == nullptr)
+        return x;
+    if (!Compare(x->data, y->data))
+        std::swap(x, y);
+    merge(x->right, y);
+    std::swap(x->left, x->right);
+    return x;
+}
+\end{lstlisting}
+
+通过上述操作，可以对斜堆的原理进行感性理解，即，通过每次右子树归并后交换的方式，尽量维持整棵二叉树的左右子树深度稳定，进行自我调整（self-adjusting），从而使得每一次归并操作的复杂度均摊在 $O(\log n)$\footnote{本文中若无特别说明，$\log$ 表示以 $2$ 为底数的对数。} 。下面的分析将对这一点进行严格证明。
+
+\section{势能分析法}
+在 D.D. Sleator 与 R.E. Tarjan 的文章中，使用了势能（Potential）分析的方式进行斜堆均摊复杂度的上界分析。势能分析是一种对数据结构进行均摊复杂度分析的常见方式，对于一个数据结构 $S$（例如，本例中的斜堆），我们可以定义其势能为 $\Phi(S)$，这是一个会随数据结构的形态而改变的值。实际上，可以进行感性理解：当一个数据结构的复杂程度（例如最大深度）增大时，其势能\footnote{Here \textit{potential} refers to its potential to increase later time cost.}也随之增大。因此，定义一个操作 $i$ 的摊还时间消耗 \begin{align*}
+    a_i = t_i + (\Phi_i - \Phi_{i-1}).
+\end{align*}
+于是在一个操作序列 $(op_i)_{i=1}^m$ 中，总时间消耗为 \begin{align*}
+    \sum_{i=1}^mt_i=\sum_{i=1}^ma_i-\Delta\Phi.
+\end{align*}
+通常 $\Phi_i$ 是一个初值为 $0$ 而保持非负的值，这样一来，$\sum a_i$ 就是 $\sum t_i$ 的一个上界。可以看出，势能分析法的关键在于选择适当的势能函数 $\Phi$。下面通过势能分析法对斜堆的复杂度进行分析。
+
+\section{归并操作的复杂度上界}
+
+考虑到斜堆的插入、删除操作的本质实际上都是进行归并操作，所以在分析斜堆的时间复杂度时，只需要对归并操作进行分析即可。
+
+\begin{definition}[重节点]
+    对于一个非叶子节点 $u$，其子节点 $v$ 为 $u$ 的\textbf{重儿子}当且仅当 $v$ 的子树大小大于 $u$ 子树大小的一半，并称 $u$ 为树上的\textbf{重节点}，反之则为\textbf{轻节点}。
+\end{definition}
+
+关于轻重节点有一些显然的推论：一个节点至多只有一个重儿子；一个轻儿子的子树大小不超过其父节点子树大小的一半，从而可以导出引理。
+
+\begin{lemma}
+    对于一个非叶子节点 $u$ 与其子树中的一个节点 $v$，记它们的子树大小分别为 $w_u,w_v$，设从 $u$ 到 $v$ 的路径中轻节点个数为 $k$（$u$ 不计入），则有 \begin{align*}
+        k\le\log\frac{w_u}{w_v}.
+    \end{align*}
+\end{lemma}
+\begin{proof}
+    设这条路径的轻节点为 $(x_i)_{i=1}^k$，按从 $u$ 到 $v$ 的路径顺序，并记它们的子树大小为 $w_{x_i}$，则显然有 \begin{align*}
+        w_{x_{i+1}}<\frac{w_{x_i}}{2}\ (i\le 1)\quad\text{且}\quad w_{x_1}<\frac{w_u}{2}, w_{v}\le w_{x_k}.
+    \end{align*}
+    于是 \begin{align*}
+        w_{v}\le w_{u}2^{-k}.   
+    \end{align*}
+\end{proof}
+\begin{corollary}
+    在节点数为 $n$ 的二叉树的任意一条从顶向下的路径中，共有不超过 $\lfloor \log n\rfloor$ 个轻节点。
+\end{corollary}
+
+上面的内容是关于二叉树中轻重节点的基本定义，据此展开斜堆复杂度的分析，首先是最关键的势能函数定义：
+\begin{definition}
+    对于一个斜堆 $S$，定义其势能函数 $\phi(S)$ 为其所有同时为重儿子与右儿子的节点个数。
+\end{definition}
+随后通过选定的势能函数进行摊还时间估计：
+\begin{theorem}
+    对于归并后节点数为 $n$ 的斜堆，其单次归并过程 $i$ 的摊还时间满足 \begin{align*}
+        a_i=O(\log n).
+    \end{align*}
+\end{theorem}
+\begin{proof}
+    设归并前的两个斜堆 $h_1,h_2$ 的总结点数为 $n_1,n_2$，在其右路径上的重节点个数为 $k_1,k_2$。在一次归并过程中，时间消耗可用其右路径上的节点总数来衡量，即轻儿子与重儿子的个数之和，依引理与相关节点的定义 \begin{align*}
+        t_i\le\log n_1+k_1+\log n_2+k_1+k_2\le 2\log n+k_1+k_2.
+    \end{align*}
+    
+    再考虑势能变化，显然，在一次归并操作中，右路径上所有的重节点必然与左子树发生交换，进而转变为轻节点，带来 $-(k_1+k_2)$ 的势能变化；对于轻节点转化为重节点的情况，考虑最坏（势能增加量最大）的情况，即所有路径上的轻节点都转化为重节点，此时势能变化量为 \begin{align*}
+        \Phi_i-\Phi_{i-1}\le \log n-k_1-k_2.
+    \end{align*}
+    于是有 \begin{align*}
+        a_i=t_i+\Phi_i-\Phi_{i-1}\le 3\log n=O(\log n).
+    \end{align*}
+\end{proof}
+
+这样就证明了，斜堆的归并、插入、删除操作的复杂度均为 $O(\log n)$，查询最值的操作为 $O(1)$。
+
+\section{精确时间}
+
+B. Schoenmakers 对斜堆归并操作的时间复杂度进行了更加精确的分析，其中的数学思想较为深刻；下面的内容参考其中方法，得到该操作在最坏情况下的均摊时间。
+
+笔者还没看懂，下次再补。
+
+\bibliographystyle{unsrt}
+\bibliography{reference}
+
+\end{document}
